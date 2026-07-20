@@ -25,8 +25,9 @@ uv run ruff check .                    # lint
 | Spec | Feature | Status |
 |------|---------|--------|
 | [001](plans/001-project-scaffold.md) | Backend skeleton, data models, test rig | ✅ Done |
-| 002 | FashionCLIP embeddings + style-profile scoring | Planned |
-| 003 | Streamlit swipe UI | Planned |
+| [002](plans/002-embeddings-and-scoring.md) | FashionCLIP embeddings + style-profile scoring | ✅ Done |
+| [003](plans/003-streamlit-swipe-ui.md) | Streamlit swipe UI | 🔨 Queued |
+| 004 | Swipe-informed re-ranking | Planned |
 
 ## How this repo is built
 
