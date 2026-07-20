@@ -30,11 +30,12 @@ def test_create_and_list_items(client: TestClient) -> None:
     assert candidate_response.status_code == 201
     created_seed = seed_response.json()
     assert created_seed["id"] == 1
-    assert created_seed["embedding"] is None
+    assert "embedding" not in created_seed
     assert {key: created_seed[key] for key in seed_payload} == seed_payload
 
     all_response = client.get("/items")
     assert all_response.status_code == 200
+    assert all("embedding" not in item for item in all_response.json())
     assert [item["source"] for item in all_response.json()] == [
         "seed",
         "candidate",
@@ -56,7 +57,7 @@ def test_create_item_ignores_embedding_input(client: TestClient) -> None:
     )
 
     assert response.status_code == 201
-    assert response.json()["embedding"] is None
+    assert "embedding" not in response.json()
 
 
 def test_swipe_records_feedback_for_an_item(
