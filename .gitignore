@@ -1,0 +1,14 @@
+# user data — never commit personal photos or the db
+data/
+.env
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# os / editor
+.DS_Store
+Thumbs.db
