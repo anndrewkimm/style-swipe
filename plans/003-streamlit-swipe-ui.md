@@ -1,5 +1,5 @@
 ---
-status: READY
+status: DONE
 author: claude
 created: 2026-07-19
 ---
@@ -34,12 +34,12 @@ Keep Streamlit code thin: all HTTP logic goes in a plain module (`ui/api_client.
 5. Add the UI run command (`uv run streamlit run ui/app.py`) to the `README.md` quickstart block. Leave the roadmap table alone — Claude maintains it.
 
 ## Acceptance criteria
-- [ ] `uv run streamlit run ui/app.py` against a running backend shows the top feed card (image, brand/title, score) and Like/Dislike buttons that record a swipe and advance to the next card.
-- [ ] With no embedded seed items, the UI shows the onboarding instructions instead of an error trace.
-- [ ] With the backend down, the UI shows a "start the backend" message instead of an exception.
-- [ ] The sidebar Embed button triggers `POST /embed` and displays the embedded/failed counts.
-- [ ] `tests/test_ui_client.py` covers all `api_client` functions with a mocked transport; full suite passes offline; no test imports Streamlit.
-- [ ] `uv run ruff check .` and `uv run ruff format --check .` pass.
+- [x] `uv run streamlit run ui/app.py` against a running backend shows the top feed card (image, brand/title, score) and Like/Dislike buttons that record a swipe and advance to the next card.
+- [x] With no embedded seed items, the UI shows the onboarding instructions instead of an error trace.
+- [x] With the backend down, the UI shows a "start the backend" message instead of an exception.
+- [x] The sidebar Embed button triggers `POST /embed` and displays the embedded/failed counts.
+- [x] `tests/test_ui_client.py` covers all `api_client` functions with a mocked transport; full suite passes offline; no test imports Streamlit.
+- [x] `uv run ruff check .` and `uv run ruff format --check .` pass.
 
 ## Out of scope
 - React/Vite frontend (later spec per conventions — do not start it).
@@ -48,7 +48,25 @@ Keep Streamlit code thin: all HTTP logic goes in a plain module (`ui/api_client.
 - Auth, deployment, mobile layout.
 
 ## Implementation notes
-*(Codex fills this in: what was built, deviations, questions, follow-ups.)*
+- Moved `httpx` to runtime dependencies, added Streamlit, and updated the uv
+  lockfile.
+- Added a plain `ui.api_client` module for API URL configuration, feed retrieval,
+  duplicate-safe swipe submission, embedding requests, and the no-seeds domain
+  error. All functions accept an injected `httpx.Client`.
+- Added the Streamlit card UI with a refilling session queue, local image/missing
+  image rendering, brand/title fallback, three-decimal scores, Like/Dislike actions,
+  and session-only swipe counts.
+- Added friendly onboarding and backend-unreachable states plus a sidebar embedding
+  action that displays embedded and failed counts. No backend endpoints were added.
+- Added six `httpx.MockTransport` tests covering every client function and API URL
+  configuration; no test imports Streamlit. Added the UI command to the README
+  quickstart without changing the roadmap table.
+- Verification passed offline: full pytest suite (22 passed), Ruff lint/format,
+  uv lock validation, real headless Streamlit health/root HTTP checks, and AppTest
+  smoke scenarios for backend-down, no-seeds onboarding, card rendering, embedding,
+  and Like/session-count behavior.
+- Deviations: none. The existing upstream Starlette TestClient `httpx`/`httpx2`
+  deprecation warning remains unrelated to this UI client.
 
 ## Review feedback
 *(Claude fills this in if the review fails: concrete fixes required.)*

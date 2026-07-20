@@ -16,6 +16,7 @@ Swiping refines the ranking over time, giving the project a measurable ML story:
 ```sh
 uv sync                                # install deps
 uv run uvicorn app.main:app --reload   # start the backend
+uv run streamlit run ui/app.py         # start the swipe UI
 uv run pytest                          # run tests
 uv run ruff check .                    # lint
 ```
@@ -26,8 +27,8 @@ uv run ruff check .                    # lint
 |------|---------|--------|
 | [001](plans/001-project-scaffold.md) | Backend skeleton, data models, test rig | ✅ Done |
 | [002](plans/002-embeddings-and-scoring.md) | FashionCLIP embeddings + style-profile scoring | ✅ Done |
-| [003](plans/003-streamlit-swipe-ui.md) | Streamlit swipe UI | 🔨 Queued |
-| 004 | Swipe-informed re-ranking | Planned |
+| [003](plans/003-streamlit-swipe-ui.md) | Streamlit swipe UI | ✅ Done |
+| [004](plans/004-swipe-informed-reranking.md) | Swipe-informed re-ranking + offline eval | 🔨 Queued |
 
 ## How this repo is built
 
