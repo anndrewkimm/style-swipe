@@ -30,6 +30,7 @@ uv run ruff check .                    # lint
 | [003](plans/003-streamlit-swipe-ui.md) | Streamlit swipe UI | ✅ Done |
 | [004](plans/004-swipe-informed-reranking.md) | Swipe-informed re-ranking + offline eval | ✅ Done |
 | [005](plans/005-url-importer.md) | Product URL importer (real store items) | 🔨 Queued |
+| [006](plans/006-google-shopping-discovery.md) | Google Shopping discovery via SerpAPI | 🔨 Queued |
 
 ## How this repo is built
 
