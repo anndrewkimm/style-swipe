@@ -107,7 +107,7 @@ def test_feed_orders_candidates_and_excludes_swiped_items(
     )
     assert swipe_response.status_code == 201
 
-    response = client.get("/feed")
+    response = client.get("/feed", params={"profile": "seed"})
 
     assert response.status_code == 200
     feed = response.json()
@@ -155,3 +155,103 @@ def test_swipes_create_and_reject_missing_or_duplicate_items(
 
     duplicate_response = client.post("/swipes", json=payload)
     assert duplicate_response.status_code == 409
+
+
+def test_feed_profiles_match_without_swipes(
+    client: TestClient,
+    test_engine: Engine,
+) -> None:
+    seed = _create_item(client, "seed", "closet/seed.jpg")
+    first = _create_item(client, "candidate", "feed/first.jpg")
+    second = _create_item(client, "candidate", "feed/second.jpg")
+    vectors = {
+        seed["id"]: np.array([1.0, 0.0], dtype=np.float32),
+        first["id"]: np.array([1.0, 0.0], dtype=np.float32),
+        second["id"]: np.array([0.0, 1.0], dtype=np.float32),
+    }
+    with Session(test_engine) as session:
+        for item_id, vector in vectors.items():
+            item = session.get(Item, item_id)
+            item.embedding = vector_to_bytes(vector)
+            session.add(item)
+        session.commit()
+
+    seed_feed = client.get("/feed", params={"profile": "seed"}).json()
+    personalized_feed = client.get("/feed").json()
+
+    assert [item["id"] for item in personalized_feed] == [
+        item["id"] for item in seed_feed
+    ]
+    assert [item["score"] for item in personalized_feed] == pytest.approx(
+        [item["score"] for item in seed_feed]
+    )
+
+
+def test_like_flips_personalized_feed_order(
+    client: TestClient,
+    test_engine: Engine,
+) -> None:
+    seed = _create_item(client, "seed", "closet/seed.jpg")
+    liked = _create_item(client, "candidate", "feed/liked.jpg")
+    seed_facing = _create_item(client, "candidate", "feed/seed-facing.jpg")
+    liked_facing = _create_item(client, "candidate", "feed/liked-facing.jpg")
+    vectors = {
+        seed["id"]: np.array([1.0, 0.0], dtype=np.float32),
+        liked["id"]: np.array([0.0, 1.0], dtype=np.float32),
+        seed_facing["id"]: np.array([1.0, 0.0], dtype=np.float32),
+        liked_facing["id"]: np.array([0.766, 0.643], dtype=np.float32),
+    }
+    with Session(test_engine) as session:
+        for item_id, vector in vectors.items():
+            item = session.get(Item, item_id)
+            item.embedding = vector_to_bytes(vector)
+            session.add(item)
+        session.commit()
+
+    swipe_response = client.post(
+        "/swipes",
+        json={"item_id": liked["id"], "liked": True},
+    )
+    assert swipe_response.status_code == 201
+
+    seed_feed = client.get("/feed", params={"profile": "seed"}).json()
+    personalized_feed = client.get("/feed").json()
+
+    assert [item["id"] for item in seed_feed] == [
+        seed_facing["id"],
+        liked_facing["id"],
+    ]
+    assert [item["id"] for item in personalized_feed] == [
+        liked_facing["id"],
+        seed_facing["id"],
+    ]
+
+
+def test_personalized_feed_ignores_unembedded_swipe(
+    client: TestClient,
+    test_engine: Engine,
+) -> None:
+    seed = _create_item(client, "seed", "closet/seed.jpg")
+    unembedded = _create_item(client, "candidate", "feed/unembedded.jpg")
+    candidate = _create_item(client, "candidate", "feed/candidate.jpg")
+    with Session(test_engine) as session:
+        seed_item = session.get(Item, seed["id"])
+        seed_item.embedding = vector_to_bytes(np.array([1.0, 0.0], dtype=np.float32))
+        candidate_item = session.get(Item, candidate["id"])
+        candidate_item.embedding = vector_to_bytes(
+            np.array([1.0, 0.0], dtype=np.float32)
+        )
+        session.add(seed_item)
+        session.add(candidate_item)
+        session.commit()
+
+    swipe_response = client.post(
+        "/swipes",
+        json={"item_id": unembedded["id"], "liked": True},
+    )
+    assert swipe_response.status_code == 201
+
+    response = client.get("/feed")
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()] == [candidate["id"]]

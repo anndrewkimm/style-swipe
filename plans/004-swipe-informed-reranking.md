@@ -1,5 +1,5 @@
 ---
-status: READY
+status: DONE
 author: claude
 created: 2026-07-19
 ---
@@ -29,12 +29,12 @@ Approach: Rocchio relevance feedback — cheap, explainable, no training loop. `
 5. Tests — `tests/test_recommend.py` additions (no-swipe equivalence; a liked-direction candidate scores strictly higher under the adjusted profile; a disliked-direction candidate strictly lower; zero-vector fallback), `tests/test_feed.py` additions (`?profile=seed` vs default personalized ordering flips after a like, using handcrafted vectors; swipe on an unembedded item is ignored without error), `tests/test_evaluate.py` (`holdout_rank` ordering + tie rule; `evaluate_profiles` on constructed vectors where personalized strictly beats baseline on MRR; not-enough-data path of the db-reading logic).
 
 ## Acceptance criteria
-- [ ] With zero swipes, `build_adjusted_profile` equals `build_style_profile` and `/feed?profile=personalized` returns the same order as `?profile=seed`.
-- [ ] After a like, candidates similar to the liked item rank strictly higher in the personalized feed than in the seed feed; after a dislike, similar candidates rank strictly lower.
-- [ ] Swipes on items without embeddings are ignored by both the feed and the evaluator — no errors.
-- [ ] `uv run python -m app.evaluate` prints mean rank and MRR for baseline and personalized profiles, or a friendly not-enough-data message; `evaluate_profiles` is unit-tested with vectors where personalized beats baseline.
-- [ ] `ui/app.py` contains no `use_container_width` usages and the UI renders unchanged.
-- [ ] Full suite passes offline; `uv run ruff check .` and `uv run ruff format --check .` pass.
+- [x] With zero swipes, `build_adjusted_profile` equals `build_style_profile` and `/feed?profile=personalized` returns the same order as `?profile=seed`.
+- [x] After a like, candidates similar to the liked item rank strictly higher in the personalized feed than in the seed feed; after a dislike, similar candidates rank strictly lower.
+- [x] Swipes on items without embeddings are ignored by both the feed and the evaluator — no errors.
+- [x] `uv run python -m app.evaluate` prints mean rank and MRR for baseline and personalized profiles, or a friendly not-enough-data message; `evaluate_profiles` is unit-tested with vectors where personalized beats baseline.
+- [x] `ui/app.py` contains no `use_container_width` usages and the UI renders unchanged.
+- [x] Full suite passes offline; `uv run ruff check .` and `uv run ruff format --check .` pass.
 
 ## Out of scope
 - Learned rankers (logistic regression, gradient boosting, fine-tuning) — Rocchio only for now.
@@ -43,7 +43,26 @@ Approach: Rocchio relevance feedback — cheap, explainable, no training loop. `
 - Persisting evaluation results; hyperparameter search over ALPHA/BETA.
 
 ## Implementation notes
-*(Codex fills this in: what was built, deviations, questions, follow-ups.)*
+- Added Rocchio profile adjustment with the specified alpha/beta defaults, exact
+  no-feedback equivalence, liked/disliked mean vectors, L2 normalization, and
+  seed-profile fallback when feedback cancels the profile to zero.
+- Extended `/feed` with seed and default-personalized profile modes. Personalized
+  mode joins all swipes to their items, ignores missing embeddings, applies feedback
+  to ranking, and preserves exclusion of already-swiped candidates.
+- Added the offline evaluation module with worst-case tie ranking, leave-one-out
+  baseline/personalized mean-rank and MRR metrics, dynamic `db.engine` loading, and
+  a friendly zero-exit low-data CLI path. Unembedded swipe items are excluded.
+- Replaced all four deprecated Streamlit `use_container_width` arguments with
+  `width="stretch"`; no UI behavior or features were otherwise changed.
+- Expanded recommendation and feed coverage and added evaluator tests for exact
+  no-swipe behavior, like/dislike direction changes, zero fallback, profile order
+  flips, unembedded swipe handling, rank ties, measurable MRR improvement, database
+  loading, low-data output, and successful metric output.
+- Verification passed offline: full pytest suite (32 passed), Ruff lint/format,
+  uv lock validation, the real `python -m app.evaluate` low-data path, and a
+  Streamlit AppTest render after the width migration.
+- Deviations: none. The existing upstream Starlette TestClient `httpx`/`httpx2`
+  deprecation warning remains unrelated to this spec.
 
 ## Review feedback
 *(Claude fills this in if the review fails: concrete fixes required.)*

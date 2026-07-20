@@ -66,7 +66,7 @@ with httpx.Client(base_url=get_api_url(), timeout=30.0) as api_client:
         likes_column.metric("Likes", st.session_state.likes)
         dislikes_column.metric("Dislikes", st.session_state.dislikes)
 
-        if st.button("Embed pending items", use_container_width=True):
+        if st.button("Embed pending items", width="stretch"):
             try:
                 embed_result = post_embed(api_client)
             except httpx.ConnectError:
@@ -101,7 +101,7 @@ with httpx.Client(base_url=get_api_url(), timeout=30.0) as api_client:
     item = st.session_state.queue[0]
     image_path = Path(str(item["image_path"]))
     if image_path.is_file():
-        st.image(str(image_path), use_container_width=True)
+        st.image(str(image_path), width="stretch")
     else:
         st.caption(f"Missing image: {image_path}")
 
@@ -112,8 +112,8 @@ with httpx.Client(base_url=get_api_url(), timeout=30.0) as api_client:
 
     like_column, dislike_column = st.columns(2)
     with like_column:
-        if st.button("👍 Like", type="primary", use_container_width=True):
+        if st.button("👍 Like", type="primary", width="stretch"):
             _record_swipe(api_client, item_id=int(item["id"]), liked=True)
     with dislike_column:
-        if st.button("👎 Dislike", use_container_width=True):
+        if st.button("👎 Dislike", width="stretch"):
             _record_swipe(api_client, item_id=int(item["id"]), liked=False)

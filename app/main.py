@@ -6,13 +6,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Literal
 
+import numpy as np
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from sqlmodel import Session, SQLModel, select
 
 from app.db import get_session, init_db
 from app.embeddings import bytes_to_vector, embed_image, vector_to_bytes
 from app.models import Item, Swipe
-from app.recommend import build_style_profile, score_candidates
+from app.recommend import (
+    build_adjusted_profile,
+    build_style_profile,
+    score_candidates,
+)
 
 
 class ItemCreate(SQLModel):
@@ -79,6 +84,7 @@ SourceFilter = Annotated[
     Query(),
 ]
 FeedLimit = Annotated[int, Query(ge=1, le=100)]
+FeedProfile = Annotated[Literal["seed", "personalized"], Query()]
 
 
 @app.get("/health")
@@ -138,6 +144,7 @@ def embed_pending_items(session: SessionDependency) -> EmbedResult:
 def get_feed(
     session: SessionDependency,
     limit: FeedLimit = 20,
+    profile: FeedProfile = "personalized",
 ) -> list[FeedItem]:
     """Rank embedded, unswiped candidates against the seed style profile."""
     seeds = session.exec(
@@ -153,9 +160,30 @@ def get_feed(
         )
 
     seed_vectors = [bytes_to_vector(item.embedding) for item in seeds]
-    profile = build_style_profile(seed_vectors)
+    swipe_rows = session.exec(
+        select(Swipe, Item).join(Item, Swipe.item_id == Item.id)
+    ).all()
+    swiped_item_ids = {swipe.item_id for swipe, _item in swipe_rows}
 
-    swiped_item_ids = set(session.exec(select(Swipe.item_id)).all())
+    if profile == "personalized":
+        liked_vectors: list[np.ndarray] = []
+        disliked_vectors: list[np.ndarray] = []
+        for swipe, item in swipe_rows:
+            if item.embedding is None:
+                continue
+            vector = bytes_to_vector(item.embedding)
+            if swipe.liked:
+                liked_vectors.append(vector)
+            else:
+                disliked_vectors.append(vector)
+        ranking_profile = build_adjusted_profile(
+            seed_vectors,
+            liked_vectors,
+            disliked_vectors,
+        )
+    else:
+        ranking_profile = build_style_profile(seed_vectors)
+
     candidates = session.exec(
         select(Item).where(
             Item.source == "candidate",
@@ -164,7 +192,7 @@ def get_feed(
     ).all()
     candidates = [item for item in candidates if item.id not in swiped_item_ids]
     candidate_vectors = [bytes_to_vector(item.embedding) for item in candidates]
-    scores = score_candidates(profile, candidate_vectors)
+    scores = score_candidates(ranking_profile, candidate_vectors)
 
     ranked = sorted(
         zip(candidates, scores, strict=True),

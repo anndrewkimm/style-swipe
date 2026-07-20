@@ -4,6 +4,9 @@ from collections.abc import Sequence
 
 import numpy as np
 
+ALPHA = 0.5
+BETA = 0.25
+
 
 def _normalize(vector: np.ndarray) -> np.ndarray:
     normalized_input = np.asarray(vector, dtype=np.float32)
@@ -24,6 +27,45 @@ def build_style_profile(seed_vectors: Sequence[np.ndarray]) -> np.ndarray:
         dtype=np.float32,
     )
     return _normalize(mean_vector)
+
+
+def build_adjusted_profile(
+    seed_vectors: Sequence[np.ndarray],
+    liked_vectors: Sequence[np.ndarray],
+    disliked_vectors: Sequence[np.ndarray],
+    alpha: float = ALPHA,
+    beta: float = BETA,
+) -> np.ndarray:
+    """Adjust the seed profile toward likes and away from dislikes."""
+    seed_profile = build_style_profile(seed_vectors)
+    if not liked_vectors and not disliked_vectors:
+        return seed_profile
+
+    adjusted_profile = seed_profile.copy()
+
+    if liked_vectors:
+        liked_mean = np.mean(
+            np.stack(
+                [np.asarray(vector, dtype=np.float32) for vector in liked_vectors]
+            ),
+            axis=0,
+            dtype=np.float32,
+        )
+        adjusted_profile += np.float32(alpha) * liked_mean
+
+    if disliked_vectors:
+        disliked_mean = np.mean(
+            np.stack(
+                [np.asarray(vector, dtype=np.float32) for vector in disliked_vectors]
+            ),
+            axis=0,
+            dtype=np.float32,
+        )
+        adjusted_profile -= np.float32(beta) * disliked_mean
+
+    if np.linalg.norm(adjusted_profile) == 0:
+        return seed_profile
+    return _normalize(adjusted_profile)
 
 
 def score_candidates(
